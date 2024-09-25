@@ -127,11 +127,9 @@ conda install pytorch torchvision -c pytorch  # This command will automatically 
 pip install -U openmim
 mim install mmengine
 mim install mmcv
+mim install mmaction2 -f https://github.com/open-mmlab/mmaction2.git
 mim install mmdet  # optional
 mim install mmpose  # optional
-git clone https://github.com/open-mmlab/mmaction2.git
-cd mmaction2
-pip install -v -e .
 ```
 
 </details>
