@@ -33,11 +33,13 @@ class ActionDataPreprocessor(BaseDataPreprocessor):
                  to_rgb: bool = False,
                  to_float32: bool = True,
                  blending: Optional[dict] = None,
-                 format_shape: str = 'NCHW') -> None:
+                 format_shape: str = 'NCHW',
+                 combine_frame_inds:Optional[bool] = False) -> None:
         super().__init__()
         self.to_rgb = to_rgb
         self.to_float32 = to_float32
         self.format_shape = format_shape
+        self.combined_frame_inds = combine_frame_inds
 
         if mean is not None:
             assert std is not None, 'To enable the normalization in ' \
@@ -104,9 +106,13 @@ class ActionDataPreprocessor(BaseDataPreprocessor):
         Returns:
             dict: Data in the same format as the model input.
         """
-        inputs, data_samples = data['inputs'], data['data_samples']
+        inputs, data_samples, frame_inds = data['inputs'], data['data_samples'],data['frame_inds']
         inputs, data_samples = self.preprocess(inputs, data_samples, training)
-        data['inputs'] = inputs
+        if self.combined_frame_inds:
+            combined_frame_inds = torch.stack(frame_inds, dim=0)
+            data['inputs'] = (inputs,combined_frame_inds)
+        else:
+            data['inputs'] = inputs
         data['data_samples'] = data_samples
         return data
 
@@ -151,3 +157,4 @@ class ActionDataPreprocessor(BaseDataPreprocessor):
                                                        data_samples)
 
         return batch_inputs, data_samples
+

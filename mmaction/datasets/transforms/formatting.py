@@ -70,6 +70,10 @@ class PackActionInputs(BaseTransform):
             elif 'text' in results:
                 text = results['text']
                 packed_results['inputs'] = to_tensor(text)
+            if 'frame_inds' in results:
+                frame_inds = results['frame_inds']
+                packed_results['frame_inds'] = to_tensor(frame_inds)
+
             else:
                 raise ValueError(
                     'Cannot get `imgs`, `keypoint`, `heatmap_imgs`, '
