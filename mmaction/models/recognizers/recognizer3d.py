@@ -13,7 +13,7 @@ class Recognizer3D(BaseRecognizer):
 
     def extract_feat(self,
                      inputs: Tensor,
-                     stage: str = 'neck',
+                     stage: str = 'backbone',
                      data_samples: OptSampleList = None,
                      test_mode: bool = False) -> tuple:
         """Extract features of different stages.

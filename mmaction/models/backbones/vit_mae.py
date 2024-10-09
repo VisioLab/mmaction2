@@ -275,6 +275,7 @@ class VisionTransformer(BaseModule):
                  use_mean_pooling: int = True,
                  pretrained: Optional[str] = None,
                  return_feat_map: bool = False,
+                 freeze: bool = False,
                  init_cfg: Optional[Union[Dict, List[Dict]]] = [
                      dict(
                          type='TruncNormal', layer='Linear', std=0.02,

@@ -57,6 +57,10 @@ class BaseRecognizer(BaseModel, metaclass=ABCMeta):
                 raise TypeError(
                     f'Unsupported type of module {type(module["type"])}')
 
+        self.backbone_cfg = backbone
+        self.neck_cfg = neck
+        self.head_cfg = cls_head
+
         # Record the source of the backbone.
         self.backbone_from = 'mmaction2'
         if is_from(backbone, 'mmcls.'):
@@ -152,6 +156,16 @@ class BaseRecognizer(BaseModel, metaclass=ABCMeta):
             # avoid repeated initialization
             self.backbone.init_weights = fake_init
         super().init_weights()
+        if self.backbone_cfg.get('freeze'):
+            frozen_layers = []
+            for name,weights in self.backbone.named_parameters():
+                weights.requires_grad = False
+                frozen_layers.append(name)
+        
+            print(f'Frozen Layers: {frozen_layers}')
+                
+
+
 
     def loss(self, inputs: torch.Tensor, data_samples: SampleList,
              **kwargs) -> dict:
