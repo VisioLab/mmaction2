@@ -5,6 +5,7 @@ from torch import Tensor
 from mmaction.registry import MODELS
 from mmaction.utils import OptSampleList
 from .base import BaseRecognizer
+from typing import Optional
 
 
 @MODELS.register_module()
@@ -36,6 +37,10 @@ class Recognizer3D(BaseRecognizer):
         # Record the kwargs required by `loss` and `predict`
         loss_predict_kwargs = dict()
 
+        pos_emb: Optional[torch.Tensor] = None
+        if isinstance(inputs,tuple):
+            inputs, pos_emb = inputs
+
         num_segs = inputs.shape[1]
         # [N, num_crops, C, T, H, W] ->
         # [N * num_crops, C, T, H, W]
@@ -66,6 +71,8 @@ class Recognizer3D(BaseRecognizer):
                     batch_imgs = inputs[view_ptr:view_ptr + max_testing_views]
                     feat = self.backbone(batch_imgs)
                     if self.with_neck:
+                        if isinstance(pos_emb,torch.Tensor):
+                            feat = (feat,pos_emb)
                         feat, _ = self.neck(feat)
                     feats.append(feat)
                     view_ptr += max_testing_views
@@ -91,6 +98,8 @@ class Recognizer3D(BaseRecognizer):
             else:
                 x = self.backbone(inputs)
                 if self.with_neck:
+                    if isinstance(pos_emb,torch.Tensor):
+                        x = (x,pos_emb)
                     x, _ = self.neck(x)
 
             return x, loss_predict_kwargs
@@ -102,7 +111,9 @@ class Recognizer3D(BaseRecognizer):
 
             loss_aux = dict()
             if self.with_neck:
-                x, loss_aux = self.neck(x, data_samples=data_samples)
+                if isinstance(pos_emb,torch.Tensor):
+                    x = (x,pos_emb)
+                x, loss_aux = self.neck(x,data_samples=data_samples)
 
             # Return features extracted through neck
             loss_predict_kwargs['loss_aux'] = loss_aux

@@ -11,7 +11,7 @@ class RESNET_BACKBONE(ResNet):
 
         self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
     def forward(self, x: Tensor):
-        x = x.permute(0, 2, 1, 3, 4)
+        # x = x.permute(0, 2, 1, 3, 4)
         B, C, F, H, W = x.shape  # Batch x Channel x Frame x Height x Width
         x = x.reshape(B * F, C, H, W)
         out = super().forward(x)

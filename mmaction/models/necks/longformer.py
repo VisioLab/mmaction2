@@ -5,6 +5,7 @@ from mmengine.model import BaseModule
 from mmaction.registry import MODELS
 from torch import Tensor
 import torch.nn as nn
+from typing import Optional
 
 @MODELS.register_module()
 class VTNLongformerModel(BaseModule):
@@ -54,9 +55,14 @@ class VTNLongformerModel(BaseModule):
         
 
 
-    def forward(self,x) -> Tensor:
-        x, position_ids = x
+    def forward(self,x,data_samples=None) -> tuple:
+        loss_aux = dict()
+
+        position_ids = None
+        if isinstance(x,tuple):
+            x, position_ids = x
         
+
         # temporal encoder (Longformer)
         B, D, E  = x.shape
 
@@ -77,12 +83,16 @@ class VTNLongformerModel(BaseModule):
         token_type_ids[:, 0] = 1
 
         # position_ids
-        position_ids = position_ids.long()
-        mask = attention_mask.ne(0).int()
-        max_position_embeddings = torch.tensor(self.temporal_encoder.config.max_position_embeddings)
-        position_ids = position_ids % (max_position_embeddings - 2)
-        position_ids[:, 0] = max_position_embeddings - 2
-        position_ids[mask == 0] = max_position_embeddings - 1
+        if isinstance(position_ids,torch.Tensor):
+            position_ids = position_ids.long()
+            mask = attention_mask.ne(0).int()
+            max_position_embeddings = torch.tensor(self.temporal_encoder.config.max_position_embeddings)
+            position_ids = position_ids % (max_position_embeddings - 2)
+            position_ids[:, 0] = max_position_embeddings - 2
+            position_ids[mask == 0] = max_position_embeddings - 1
+
+
+
 
         x = self.temporal_encoder(input_ids=None,
                                   attention_mask=attention_mask,
@@ -94,12 +104,7 @@ class VTNLongformerModel(BaseModule):
                                   return_dict=None)
         # MLP head
         x = x["last_hidden_state"] # type: ignore
-        return x
-
-
-
-
-
+        return x,loss_aux
 
 
 
@@ -133,7 +138,7 @@ class VTNLongformerModelHelper(LongformerModel):
         self.embeddings.word_embeddings = None  # to avoid distributed error of unused parameters
 
 
-def pad_to_window_size_local(input_ids: torch.Tensor, attention_mask: torch.Tensor, position_ids: torch.Tensor,
+def pad_to_window_size_local(input_ids: torch.Tensor, attention_mask: torch.Tensor, position_ids: Optional[torch.Tensor],
                              one_sided_window_size: int, pad_token_id: int):
     '''A helper function to pad tokens and mask to work with the sliding_chunks implementation of Longformer self-attention.
     Based on _pad_to_window_size from https://github.com/huggingface/transformers:
@@ -151,5 +156,6 @@ def pad_to_window_size_local(input_ids: torch.Tensor, attention_mask: torch.Tens
     padding_len = (w - seqlen % w) % w
     input_ids = F.pad(input_ids.permute(0, 2, 1), (0, padding_len), value=pad_token_id).permute(0, 2, 1)
     attention_mask = F.pad(attention_mask, (0, padding_len), value=False)  # no attention on the padding tokens
-    position_ids = F.pad(position_ids, (1, padding_len), value=False)  # no attention on the padding tokens
+    if position_ids is not None:
+        position_ids = F.pad(position_ids, (1, padding_len), value=False)  # no attention on the padding tokens
     return input_ids, attention_mask, position_ids

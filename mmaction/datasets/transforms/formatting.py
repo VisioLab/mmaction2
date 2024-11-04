@@ -96,6 +96,9 @@ class PackActionInputs(BaseTransform):
         if 'label' in results:
             data_sample.set_gt_label(results['label'])
 
+        if 'filename' in results:
+            data_sample.set_field(results['filename'],'filename',field_type='metainfo')
+
         # Set custom algorithm keys
         for key in self.algorithm_keys:
             if key in results:
