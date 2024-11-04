@@ -11,6 +11,8 @@ from mmaction.registry import MODELS
 from mmaction.utils import (ConfigType, ForwardResults, OptConfigType,
                             OptSampleList, SampleList)
 
+import mlflow
+
 
 class BaseRecognizer(BaseModel, metaclass=ABCMeta):
     """Base class for recognizers.
@@ -56,6 +58,10 @@ class BaseRecognizer(BaseModel, metaclass=ABCMeta):
             else:
                 raise TypeError(
                     f'Unsupported type of module {type(module["type"])}')
+
+        self.backbone_cfg = backbone
+        self.neck_cfg = neck
+        self.head_cfg = cls_head
 
         # Record the source of the backbone.
         self.backbone_from = 'mmaction2'
@@ -152,6 +158,12 @@ class BaseRecognizer(BaseModel, metaclass=ABCMeta):
             # avoid repeated initialization
             self.backbone.init_weights = fake_init
         super().init_weights()
+        # if self.backbone_cfg.get('freeze'):
+        #     frozen_layers = []
+        #     for name,weights in self.backbone.named_parameters():
+        #         weights.requires_grad = False
+        #         frozen_layers.append(name)                
+
 
     def loss(self, inputs: torch.Tensor, data_samples: SampleList,
              **kwargs) -> dict:
@@ -169,12 +181,16 @@ class BaseRecognizer(BaseModel, metaclass=ABCMeta):
         """
         feats, loss_kwargs = \
             self.extract_feat(inputs,
-                              data_samples=data_samples)
+                              data_samples=data_samples,
+                              stage='neck' if self.with_neck else 'backbone')
 
         # loss_aux will be a empty dict if `self.with_neck` is False.
         loss_aux = loss_kwargs.get('loss_aux', dict())
         loss_cls = self.cls_head.loss(feats, data_samples, **loss_kwargs)
         losses = merge_dict(loss_cls, loss_aux)
+
+
+        
         return losses
 
     def predict(self, inputs: torch.Tensor, data_samples: SampleList,
@@ -198,7 +214,7 @@ class BaseRecognizer(BaseModel, metaclass=ABCMeta):
                 - item (torch.Tensor): Classification scores, has a shape
                     (num_classes, )
         """
-        feats, predict_kwargs = self.extract_feat(inputs, test_mode=True)
+        feats, predict_kwargs = self.extract_feat(inputs, stage='neck' if self.with_neck else 'backbone',test_mode=True)
         predictions = self.cls_head.predict(feats, data_samples,
                                             **predict_kwargs)
         return predictions
@@ -218,7 +234,7 @@ class BaseRecognizer(BaseModel, metaclass=ABCMeta):
             Union[tuple, torch.Tensor]: Features from ``backbone`` or ``neck``
             or ``head`` forward.
         """
-        feats, _ = self.extract_feat(inputs, stage=stage)
+        feats, _ = self.extract_feat(inputs,stage='neck' if self.with_neck else 'backbone')
         return feats
 
     def forward(self,
@@ -259,7 +275,8 @@ class BaseRecognizer(BaseModel, metaclass=ABCMeta):
         if mode == 'predict':
             return self.predict(inputs, data_samples, **kwargs)
         elif mode == 'loss':
-            return self.loss(inputs, data_samples, **kwargs)
+            loss = self.loss(inputs, data_samples, **kwargs)
+            return loss
         else:
             raise RuntimeError(f'Invalid mode "{mode}". '
                                'Only supports loss, predict and tensor mode')

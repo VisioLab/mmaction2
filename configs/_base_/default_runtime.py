@@ -3,9 +3,9 @@ default_scope = 'mmaction'
 default_hooks = dict(
     runtime_info=dict(type='RuntimeInfoHook'),
     timer=dict(type='IterTimerHook'),
-    logger=dict(type='LoggerHook', interval=20, ignore_last=False),
+    logger=dict(type='LoggerHook', interval=50, ignore_last=False),
     param_scheduler=dict(type='ParamSchedulerHook'),
-    checkpoint=dict(type='CheckpointHook', interval=1, save_best='auto'),
+    # checkpoint=dict(type='CheckpointHook', interval=1, save_best='auto'),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     sync_buffers=dict(type='SyncBuffersHook'))
 

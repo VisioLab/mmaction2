@@ -38,7 +38,11 @@ class TimeSformerHead(BaseHead):
             self.dropout = nn.Dropout(p=self.dropout_ratio)
         else:
             self.dropout = None
-        self.fc_cls = nn.Linear(self.in_channels, self.num_classes)
+        self.fc_cls = nn.Sequential(
+            nn.Linear(self.in_channels, self.in_channels),
+            nn.ReLU(),
+            nn.Linear(self.in_channels,self.num_classes)
+        )
 
     def init_weights(self) -> None:
         """Initiate the parameters from scratch."""
