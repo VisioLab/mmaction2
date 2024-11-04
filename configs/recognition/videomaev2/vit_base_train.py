@@ -7,21 +7,21 @@ model = dict(
         type='VisionTransformer',
         img_size=224,
         patch_size=16,
-        embed_dims=384,
+        embed_dims=768,
         depth=12,
-        num_heads=24,
+        num_heads=12,
         mlp_ratio=4,
         qkv_bias=True,
         num_frames=16,
         drop_path_rate=0.1,
         norm_cfg=dict(type='LN', eps=1e-6),
-        pretrained = '/home/hamza/action_recognition/mmaction2/pretrained_weights/viT_small.pth',
+        pretrained = '/home/hamza/action_recognition/mmaction2/pretrained_weights/viT_base.pth',
         freeze=True,
     ),
     cls_head=dict(
         type='TimeSformerHead',
         num_classes=4,
-        in_channels=384,
+        in_channels=768,
         average_clips='prob',
         label_smooth_eps = 0.1,
         topk=(1, 2),
@@ -37,10 +37,14 @@ model = dict(
 dataset_type = 'VideoDataset'
 data_root = '../../datasets/ssv2_dataset/20bn-something-something-v2/'
 data_root_val = '../../datasets/ssv2_dataset/20bn-something-something-v2/'
-ann_file_train = './tools/data/sthv2/subsets/single_class_1/200_samples/train.txt'
-ann_file_val = './tools/data/sthv2/subsets/single_class_1/200_samples/val.txt'
+ann_file_train = './tools/data/sthv2/subsets/single_class_1/100_samples/train.txt'
+ann_file_val = './tools/data/sthv2/subsets/single_class_1/100_samples/val.txt'
 
 num_epochs = 80
+tags = {
+    "Issue_id":"AFC-3691",
+    # "Model":"VTN_RES50",
+    }
 
 
 file_client_args = dict(io_backend='disk')
@@ -66,9 +70,6 @@ train_pipeline = [
     dict(type='PackActionInputs')
 ]
 
-
-
-
 val_pipeline = [
     dict(type='DecordInit',**file_client_args),
     # dict(type='UniformSampleFrames',clip_len=16,num_clips=2,test_mode=True),
@@ -76,7 +77,7 @@ val_pipeline = [
         type='SampleFrames',
         clip_len=16,
         frame_interval=2,
-        num_clips=2,
+        num_clips=3,
         test_mode=True),
     dict(type='DecordDecode'),
     
@@ -102,7 +103,7 @@ val_dataset_cfg =dict(
     test_mode=True)
 
 train_dataloader = dict(
-batch_size=4,
+batch_size=16,
 num_workers=8,
 persistent_workers=True,
 sampler=dict(type='DefaultSampler', shuffle=True),
@@ -126,7 +127,6 @@ val_cfg = dict(type='ValLoop')
 
 val_evaluator = [
     dict(type='AccMetric',metric_options=dict(top_k_accuracy=dict(topk=(1, 2)))),
-    dict(type='ConfusionMatrix')
 ]
 
 
@@ -136,14 +136,6 @@ param_scheduler = dict(
     T_max=num_epochs)
 
 
-# optimizer
-# optim_wrapper = dict(
-#     optimizer=dict(
-#         type='SGD',
-#         lr=0.01,
-#         momentum=0.9,
-#         weight_decay=0.0001),
-# )
 
 base_lr = 3e-4
 optim_wrapper = dict(
@@ -155,4 +147,13 @@ default_hooks = dict(
     checkpoint=dict(type='CheckpointHook',save_best='auto')
 )
 
-# custom_hooks = [dict(type='EMAHook', ema_type='StochasticWeightAverage')]
+
+
+custom_hooks = [
+    dict(type ='ConfusionMatrixHook',
+         class_map="./tools/data/sthv2/subsets/class_map.json"),
+    dict(
+        type="MLflowHook",
+        tags=tags,
+        ),
+    ]
