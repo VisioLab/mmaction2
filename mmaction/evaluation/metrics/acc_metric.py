@@ -337,7 +337,7 @@ class ConfusionMatrix(BaseMetric):
         """  # noqa: E501
         import matplotlib.pyplot as plt
 
-        fig, ax = plt.subplots(figsize=(10, 10))
+        fig, ax = plt.subplots(figsize=(12,12))
 
         num_classes = confusion_matrix.size(0)
 
@@ -375,6 +375,7 @@ class ConfusionMatrix(BaseMetric):
             ylabel='True label',
             xlabel='Predicted label',
         )
+        ax.tick_params(axis='x', labelrotation=45)
         ax.invert_yaxis()
         ax.xaxis.tick_top()
 
