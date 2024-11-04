@@ -283,9 +283,9 @@ class VisionTransformer(BaseModule):
                      dict(type='Constant', layer='LayerNorm', val=1., bias=0.)
                  ],
                  **kwargs) -> None:
+        self.pretrained = pretrained
+        self.freeze = freeze
 
-        if pretrained:
-            self.init_cfg = dict(type='Pretrained', checkpoint=pretrained)
         super().__init__(init_cfg=init_cfg)
 
         self.embed_dims = embed_dims
@@ -340,6 +340,18 @@ class VisionTransformer(BaseModule):
             self.fc_norm = None
 
         self.return_feat_map = return_feat_map
+
+    def init_weights(self):
+        if self.pretrained:
+            self.init_cfg = dict(
+                type='Pretrained', checkpoint=self.pretrained)
+            super().init_weights()
+
+        if self.freeze:
+            frozen_layers = []
+            for name,weights in self.named_parameters():
+                weights.requires_grad = False
+                frozen_layers.append(name)
 
     def forward(self, x: Tensor) -> Tensor:
         """Defines the computation performed at every call.
